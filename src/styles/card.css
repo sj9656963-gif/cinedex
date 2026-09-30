@@ -1,0 +1,1336 @@
+/* ============================================================
+   씨네덱스 — 영화 포스터 카드 & 등급별 홀로그램 효과
+   카드 안의 모든 크기는 cqi(카드 너비의 1%) 단위라 어떤 크기에서도 비율이 같다.
+   ============================================================ */
+
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes spin-angle {
+  to {
+    --angle: 360deg;
+  }
+}
+
+.card {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --pointer-from-center: 0;
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --background-x: 50%;
+  --background-y: 50%;
+  --radius: 4.6cqi;
+  --ink: #2a2113;
+  --rarity-bg: #2a2113;
+  --rarity-fg: #fff;
+  --star: #8a7340;
+  --window-ring: rgba(0, 0, 0, 0.3);
+  --idle-state: running;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  container-type: inline-size;
+  perspective: 1000px;
+  isolation: isolate;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card--calm {
+  --idle-state: paused;
+}
+
+.card--drag {
+  touch-action: none;
+  cursor: grab;
+}
+
+.card--drag:active {
+  cursor: grabbing;
+}
+
+.card__rotator {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y));
+  transition: transform 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  will-change: transform;
+}
+
+.card.is-active .card__rotator {
+  transition: transform 0.12s ease-out;
+}
+
+.card__face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #1b1d2b;
+  box-shadow:
+    0 2.4cqi 6cqi -1.6cqi rgba(0, 0, 0, 0.75),
+    0 0 0 0.35cqi rgba(0, 0, 0, 0.35);
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+/* ---------- 포스터 영역 ---------- */
+.card__art {
+  position: absolute;
+  z-index: 1;
+  inset: 14.5cqi 5.2cqi 25cqi;
+  overflow: hidden;
+  border-radius: 1.4cqi;
+  background: #0d0e16;
+  box-shadow:
+    0 0 0 0.8cqi var(--window-ring),
+    0 0 0 1.3cqi rgba(255, 255, 255, 0.4);
+}
+
+.card--full .card__art {
+  inset: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.card__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  -webkit-user-drag: none;
+}
+
+.card--full .card__img {
+  object-position: 50% 35%;
+}
+
+/* ---------- 효과 레이어 공통 ---------- */
+.card__art-foil,
+.card__shine,
+.card__sparkle,
+.card__glare,
+.card__edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.card__shine {
+  z-index: 2;
+}
+
+.card__sparkle {
+  z-index: 3;
+}
+
+.card__edge {
+  z-index: 4;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 0.5cqi rgba(255, 255, 255, 0.45),
+    inset 0 0 0 1cqi rgba(0, 0, 0, 0.06);
+}
+
+.card__glare {
+  z-index: 6;
+  border-radius: inherit;
+  background: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    rgba(255, 255, 255, 0.8) 8%,
+    rgba(255, 255, 255, 0.25) 28%,
+    rgba(0, 0, 0, 0.35) 90%
+  );
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.card.is-active .card__glare {
+  opacity: 0.8;
+}
+
+/* 풀아트(울트라 이상): 그라데이션 테두리 */
+.card--full .card__edge {
+  padding: 2.6cqi;
+  box-shadow: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* ---------- 글자 ---------- */
+.card__header {
+  position: absolute;
+  z-index: 5;
+  top: 3.4cqi;
+  left: 5.2cqi;
+  right: 5.2cqi;
+  height: 9.6cqi;
+  display: flex;
+  align-items: center;
+  gap: 2cqi;
+  color: var(--ink);
+}
+
+.card__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 6.2cqi;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card__rarity {
+  flex: none;
+  padding: 0.7cqi 2.2cqi;
+  border-radius: 99cqi;
+  background: var(--rarity-bg);
+  color: var(--rarity-fg);
+  font-size: 3.6cqi;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  box-shadow: 0 0.4cqi 1.2cqi rgba(0, 0, 0, 0.25);
+}
+
+.card__footer {
+  position: absolute;
+  z-index: 5;
+  left: 5.2cqi;
+  right: 5.2cqi;
+  bottom: 3.2cqi;
+  height: 18.8cqi;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.6cqi;
+  color: var(--ink);
+}
+
+.card__line {
+  display: flex;
+  align-items: center;
+  gap: 1.6cqi;
+  min-width: 0;
+}
+
+.card__sub {
+  flex: 1;
+  min-width: 0;
+  font-size: 3.4cqi;
+  font-weight: 700;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card__stars {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8cqi;
+  font-size: 4.4cqi;
+  letter-spacing: 0.4cqi;
+  line-height: 1;
+  color: var(--star);
+}
+
+.card__crown {
+  width: 5.4cqi;
+  height: 5.4cqi;
+  color: #ffcf4a;
+  filter: drop-shadow(0 0 1cqi rgba(255, 200, 60, 0.9));
+}
+
+.card__meta {
+  font-size: 3.3cqi;
+  font-weight: 800;
+}
+
+.card__chips {
+  display: inline-flex;
+  gap: 1cqi;
+}
+
+.card .chip {
+  padding: 0.3cqi 1.3cqi;
+  border-radius: 1cqi;
+  font-size: 2.7cqi;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+.card__count {
+  margin-left: auto;
+}
+
+.card__serial {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.card--full .card__header {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: auto;
+  padding: 5.6cqi 6cqi 14cqi;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.35) 55%, transparent);
+  color: #fff;
+}
+
+.card--full .card__title {
+  text-shadow: 0 0.4cqi 1.6cqi rgba(0, 0, 0, 0.85);
+}
+
+.card--full .card__footer {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+  padding: 16cqi 6cqi 5.8cqi;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.45) 55%, transparent);
+  color: #fff;
+}
+
+.card--full .card__sub {
+  opacity: 0.85;
+}
+
+/* 작은 카드(목록): 글씨를 키우고 부가 정보는 숨김 */
+.card--sm .card__title {
+  font-size: 8cqi;
+}
+
+.card--sm .card__rarity {
+  font-size: 5.2cqi;
+  padding: 0.6cqi 2cqi;
+}
+
+.card--sm .card__sub,
+.card--sm .card__chips,
+.card--sm .card__serial {
+  display: none;
+}
+
+.card--sm .card__stars {
+  margin-left: 0;
+  font-size: 5.6cqi;
+}
+
+.card--sm .card__count {
+  margin-left: 0;
+}
+
+.card--sm .card__meta {
+  font-size: 5cqi;
+}
+
+.card--sm .card__crown {
+  width: 6.6cqi;
+  height: 6.6cqi;
+}
+
+/* ============================================================
+   등급별 스타일
+   ============================================================ */
+
+/* ----- 1. 노멀: 크림색 종이 프레임 ----- */
+.tier-normal {
+  --ink: #3a2c12;
+  --rarity-bg: #3a2c12;
+  --rarity-fg: #f7f0de;
+  --star: #9a8150;
+  --window-ring: #b59b63;
+}
+
+.tier-normal .card__face {
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.65), transparent 50%),
+    linear-gradient(160deg, #f7f0de 0%, #eadcb9 48%, #d9c497 100%);
+}
+
+/* ----- 2. 레어: 메탈 실버 프레임 + 흐르는 광택 ----- */
+.tier-rare {
+  --ink: #131923;
+  --rarity-bg: linear-gradient(135deg, #2d3444, #6b7486);
+  --rarity-fg: #fff;
+  --star: #46506a;
+  --window-ring: #58627a;
+}
+
+.tier-rare .card__face {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 0.3cqi, transparent 0.3cqi 0.9cqi),
+    linear-gradient(125deg, #7f8898 0%, #eef1f6 16%, #9ea7b6 32%, #fdfeff 48%, #8e97a7 64%, #e1e6ee 80%, #7a8394 100%);
+  background-size:
+    auto,
+    220% 220%;
+  background-position:
+    0 0,
+    var(--background-x) var(--background-y);
+}
+
+/* 레어·홀로 공통 광택 띠 */
+.tier-rare .card__shine,
+.tier-holo .card__shine {
+  background-image: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.55) 47%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0.55) 53%,
+    transparent 60%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  background-position: calc(75% - var(--pointer-x) / 2) 0;
+  mix-blend-mode: overlay;
+}
+
+.card:not(.is-active).tier-rare .card__shine,
+.card:not(.is-active).tier-holo .card__shine {
+  animation: sheen 5.5s ease-in-out -1.8s infinite;
+  animation-play-state: var(--idle-state);
+}
+
+@keyframes sheen {
+  0% {
+    background-position: 100% 0;
+  }
+  50%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* ----- 3. 홀로 레어: 무지갯빛 프레임 + 포스터 위 홀로 호일 ----- */
+.tier-holo {
+  --ink: #0f1c30;
+  --rarity-bg: linear-gradient(135deg, #6a5cff, #19b5ff 55%, #20e3b2);
+  --rarity-fg: #fff;
+  --star: #3f63e0;
+  --window-ring: #4a5f82;
+}
+
+.tier-holo .card__face {
+  background:
+    linear-gradient(125deg, rgba(255, 120, 180, 0.35), rgba(120, 220, 255, 0.35) 50%, rgba(180, 140, 255, 0.35)),
+    linear-gradient(125deg, #9fb1c9 0%, #eef4fc 18%, #b3c3da 36%, #ffffff 50%, #a5b6cf 66%, #e3ebf7 82%, #93a6c1 100%);
+  background-size:
+    200% 200%,
+    220% 220%;
+  background-position:
+    var(--background-x) var(--background-y),
+    var(--background-x) var(--background-y);
+  background-blend-mode: overlay, normal;
+}
+
+.tier-holo .card__art-foil {
+  background-image:
+    repeating-linear-gradient(
+      115deg,
+      #ff7a9a 0%,
+      #ffc86b 5%,
+      #f7ff7a 10%,
+      #7dffb2 15%,
+      #6fe3ff 20%,
+      #8f9bff 25%,
+      #e47cff 30%,
+      #ff7a9a 35%
+    ),
+    repeating-linear-gradient(35deg, rgba(0, 0, 0, 0.4) 0 0.6cqi, rgba(255, 255, 255, 0.12) 0.6cqi 1.2cqi);
+  background-size:
+    240% 240%,
+    auto;
+  background-position:
+    var(--background-x) var(--background-y),
+    0 0;
+  background-blend-mode: overlay;
+  mix-blend-mode: color-dodge;
+  filter: brightness(0.6) contrast(1.4) saturate(1.3);
+  opacity: 0.8;
+}
+
+.card:not(.is-active).tier-holo .card__art-foil {
+  animation: foil-drift 6s ease-in-out infinite alternate;
+  animation-play-state: var(--idle-state);
+}
+
+@keyframes foil-drift {
+  from {
+    background-position:
+      15% 10%,
+      0 0;
+  }
+  to {
+    background-position:
+      85% 90%,
+      0 0;
+  }
+}
+
+/* ----- 풀아트 공통 (울트라·시크릿·레전드): 카드 전체 홀로 + 글리터 ----- */
+.card--full .card__shine {
+  background-size:
+    260% 260%,
+    auto;
+  background-position:
+    var(--background-x) var(--background-y),
+    0 0;
+  background-blend-mode: overlay;
+  mix-blend-mode: color-dodge;
+}
+
+.card--full:not(.is-active) .card__shine {
+  animation: foil-drift 7s ease-in-out infinite alternate;
+  animation-play-state: var(--idle-state);
+}
+
+.card__sparkle {
+  mix-blend-mode: color-dodge;
+  -webkit-mask-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    #000 0%,
+    rgba(0, 0, 0, 0.7) 40%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  mask-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    #000 0%,
+    rgba(0, 0, 0, 0.7) 40%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+}
+
+.card__sparkle::before,
+.card__sparkle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--sparkle-texture);
+  background-repeat: repeat;
+  animation: twinkle 2.4s ease-in-out infinite alternate;
+  animation-play-state: var(--idle-state);
+}
+
+.card__sparkle::before {
+  background-size: 38cqi 38cqi;
+}
+
+.card__sparkle::after {
+  background-size: 57cqi 57cqi;
+  background-position: 19cqi 13cqi;
+  animation-delay: -1.2s;
+}
+
+.card.is-active .card__sparkle::before {
+  background-position: calc(var(--pointer-x) * -0.3) calc(var(--pointer-y) * -0.3);
+}
+
+.card.is-active .card__sparkle::after {
+  background-position: calc(19cqi + var(--pointer-x) * 0.2) calc(13cqi + var(--pointer-y) * 0.2);
+}
+
+@keyframes twinkle {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.2;
+  }
+}
+
+.card__aura {
+  position: absolute;
+  z-index: -1;
+  inset: -3%;
+  border-radius: 7cqi;
+  pointer-events: none;
+}
+
+/* ----- 4. 울트라 레어: 골드 테두리 풀아트 ----- */
+.tier-ultra {
+  --rarity-bg: linear-gradient(135deg, #fff1b8, #d9a53a 60%, #a8751b);
+  --rarity-fg: #3a2606;
+  --star: #ffd766;
+}
+
+.tier-ultra .card__face {
+  box-shadow:
+    0 0 5cqi rgba(255, 200, 80, 0.3),
+    0 2.4cqi 6cqi -1.6cqi rgba(0, 0, 0, 0.75);
+}
+
+.tier-ultra .card__edge {
+  background: linear-gradient(135deg, #b8862b 0%, #fff0b3 18%, #d9a63a 36%, #fffbe6 50%, #c9952f 64%, #ffe7a0 82%, #a87a22 100%);
+  background-size: 200% 200%;
+  background-position: var(--background-x) var(--background-y);
+}
+
+.card:not(.is-active).tier-ultra .card__edge {
+  animation: gold-flow 5s ease-in-out infinite alternate;
+}
+
+.tier-ultra .card__shine {
+  background-image:
+    repeating-linear-gradient(
+      115deg,
+      #ff7a9a 0%,
+      #ffc86b 4%,
+      #f7ff7a 8%,
+      #7dffb2 12%,
+      #6fe3ff 16%,
+      #8f9bff 20%,
+      #e47cff 24%,
+      #ff7a9a 28%
+    ),
+    repeating-linear-gradient(-35deg, rgba(0, 0, 0, 0.45) 0 0.5cqi, rgba(255, 255, 255, 0.1) 0.5cqi 1.5cqi);
+  filter: brightness(0.55) contrast(1.5) saturate(1.4);
+  opacity: 0.7;
+}
+
+.tier-ultra .card__rarity {
+  box-shadow: 0 0 2cqi rgba(255, 210, 90, 0.7);
+}
+
+@keyframes gold-flow {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+/* ----- 5. 시크릿 레어: 회전하는 무지개 테두리 + 오로라 후광 ----- */
+.tier-secret {
+  --rarity-bg: linear-gradient(90deg, #ff5f7e, #ffb35f, #ffee5f, #6bff9a, #5fd8ff, #7f7bff, #ff6bea);
+  --rarity-fg: #1d1030;
+}
+
+.tier-secret .card__edge {
+  padding: 2.8cqi;
+  background: conic-gradient(from var(--angle), #ff5f7e, #ffb35f, #ffee5f, #6bff9a, #5fd8ff, #7f7bff, #ff6bea, #ff5f7e);
+  animation: spin-angle 4s linear infinite;
+}
+
+.tier-secret .card__aura {
+  background: conic-gradient(from var(--angle), #ff5f7e, #ffb35f, #ffee5f, #6bff9a, #5fd8ff, #7f7bff, #ff6bea, #ff5f7e);
+  filter: blur(4.5cqi);
+  opacity: 0.8;
+  animation: spin-angle 4s linear infinite;
+  animation-play-state: var(--idle-state);
+}
+
+.tier-secret .card__shine {
+  background-image:
+    repeating-linear-gradient(
+      125deg,
+      #ff5f7e 0%,
+      #ffb35f 3.5%,
+      #ffee5f 7%,
+      #6bff9a 10.5%,
+      #5fd8ff 14%,
+      #7f7bff 17.5%,
+      #ff6bea 21%,
+      #ff5f7e 24.5%
+    ),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.32) 0 0.45cqi, rgba(255, 255, 255, 0.12) 0.45cqi 0.9cqi),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.32) 0 0.45cqi, rgba(255, 255, 255, 0.12) 0.45cqi 0.9cqi);
+  background-size:
+    300% 300%,
+    auto,
+    auto;
+  background-position:
+    var(--background-x) var(--background-y),
+    0 0,
+    0 0;
+  background-blend-mode: overlay, multiply, normal;
+  filter: brightness(0.62) contrast(1.45) saturate(1.6);
+  opacity: 0.78;
+}
+
+.tier-secret .card__title {
+  text-shadow:
+    0 0 2cqi rgba(255, 110, 220, 0.8),
+    0 0.4cqi 1.6cqi rgba(0, 0, 0, 0.85);
+}
+
+.tier-secret .card__stars {
+  background: linear-gradient(90deg, #ff8fa6, #ffd08f, #fff59a, #9dffc0, #93e6ff, #b6adff, #ff9df1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ----- 6. 레전드: 블랙 골드 + 황금 오라 + 떠오르는 빛 입자 ----- */
+.tier-legend {
+  --rarity-bg: linear-gradient(135deg, #16110a, #3a2b0d);
+  --rarity-fg: #ffe08a;
+  --star: #ffd766;
+}
+
+.tier-legend .card__face {
+  background: #0b0904;
+}
+
+.tier-legend .card__art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 14cqi rgba(0, 0, 0, 0.85);
+}
+
+.tier-legend .card__edge {
+  padding: 3.2cqi;
+  background: linear-gradient(
+    135deg,
+    #1b1406 0%,
+    #6b4f12 7%,
+    #fbe7a1 14%,
+    #b8872a 22%,
+    #2a1f08 32%,
+    #f7d98a 44%,
+    #fff6d8 50%,
+    #f7d98a 56%,
+    #2a1f08 68%,
+    #c79a3a 78%,
+    #fff1bf 86%,
+    #6b4f12 93%,
+    #1b1406 100%
+  );
+  background-size: 300% 300%;
+  animation: gold-flow 6s ease-in-out infinite alternate;
+}
+
+.tier-legend .card__shine {
+  background-image:
+    repeating-linear-gradient(120deg, #4a3508 0%, #ffe9a8 3%, #c8952e 6%, #fff6d6 9%, #7a5a12 12%, #4a3508 15%),
+    repeating-linear-gradient(30deg, rgba(0, 0, 0, 0.5) 0 0.4cqi, rgba(255, 240, 200, 0.15) 0.4cqi 1.2cqi);
+  filter: brightness(0.55) contrast(1.35);
+  opacity: 0.8;
+}
+
+.tier-legend .card__sparkle::before,
+.tier-legend .card__sparkle::after {
+  filter: sepia(1) saturate(4) hue-rotate(-10deg) brightness(1.25);
+}
+
+.tier-legend .card__title {
+  background: linear-gradient(100deg, #c8952e, #fff3c4 30%, #f0c24f 50%, #fff8e0 70%, #b8872a);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0.4cqi 1cqi rgba(0, 0, 0, 0.9));
+  animation: gold-text 4s linear infinite;
+  animation-play-state: var(--idle-state);
+}
+
+@keyframes gold-text {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+.tier-legend .card__rarity {
+  box-shadow:
+    inset 0 0 0 0.45cqi #d9a93a,
+    0 0 2.4cqi rgba(255, 200, 80, 0.75);
+}
+
+.tier-legend .card__stars {
+  text-shadow: 0 0 1.6cqi rgba(255, 200, 80, 0.9);
+}
+
+.tier-legend .card__aura {
+  inset: -10%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 214, 102, 0.75), rgba(255, 170, 40, 0.3) 55%, transparent 100%);
+  animation: aura-pulse 3s ease-in-out infinite;
+  animation-play-state: var(--idle-state);
+}
+
+.tier-legend .card__aura::before {
+  content: '';
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from var(--angle), rgba(255, 226, 140, 0.55) 0deg 3deg, transparent 3deg 15deg);
+  -webkit-mask: radial-gradient(closest-side, #000 30%, transparent 72%);
+  mask: radial-gradient(closest-side, #000 30%, transparent 72%);
+  animation: spin-angle 24s linear infinite;
+  animation-play-state: var(--idle-state);
+}
+
+@keyframes aura-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.card__particles {
+  position: absolute;
+  z-index: 7;
+  inset: -4% -6%;
+  pointer-events: none;
+}
+
+.card__particles span {
+  position: absolute;
+  bottom: 6%;
+  left: calc(var(--x) * 1%);
+  width: calc(var(--size) * 2.2cqi);
+  height: calc(var(--size) * 2.2cqi);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbe6 0%, #ffd766 40%, rgba(255, 200, 80, 0) 70%);
+  opacity: 0;
+  animation: rise 4.2s linear infinite;
+  animation-delay: calc(var(--delay) * -1s);
+}
+
+@keyframes rise {
+  0% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(calc(var(--drift) * 1cqi), -125cqi) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* ============================================================
+   포스터가 없을 때 만드는 그림
+   ============================================================ */
+.gen-art {
+  --h: 250;
+  --h2: 300;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 14cqi;
+  color: #fff;
+  text-align: center;
+  background:
+    radial-gradient(130% 45% at 50% 108%, hsl(var(--h2) 70% 8%) 55%, transparent 56%),
+    radial-gradient(120% 60% at 50% 100%, hsl(var(--h2) 95% 58% / 0.85), transparent 62%),
+    radial-gradient(70% 45% at 50% 32%, hsl(var(--h) 100% 82% / 0.4), transparent 70%),
+    linear-gradient(175deg, hsl(var(--h) 60% 20%), hsl(var(--h2) 65% 12%));
+}
+
+.gen-art__rays {
+  position: absolute;
+  inset: -40%;
+  background: repeating-conic-gradient(from 0deg at 50% 45%, hsl(var(--h) 100% 90% / 0.12) 0deg 5deg, transparent 5deg 15deg);
+}
+
+.gen-art__orb {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 46cqi;
+  height: 46cqi;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 32%,
+    hsl(var(--h) 100% 94%),
+    hsl(var(--h2) 95% 68%) 45%,
+    hsl(var(--h2) 80% 38%) 80%
+  );
+  box-shadow:
+    0 0 10cqi hsl(var(--h2) 100% 65% / 0.7),
+    0 0 26cqi hsl(var(--h) 100% 70% / 0.35);
+}
+
+.gen-art__strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6cqi;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 2.4cqi, transparent 2.4cqi 5.2cqi) 0 50% / 100% 2.4cqi
+      no-repeat,
+    rgba(0, 0, 0, 0.62);
+}
+
+.gen-art__strip--top {
+  top: 0;
+}
+
+.gen-art__strip--bottom {
+  bottom: 0;
+}
+
+.gen-art__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6cqi;
+  padding: 0 7cqi;
+  max-width: 100%;
+}
+
+.gen-art__kicker {
+  font-size: 3.2cqi;
+  font-weight: 800;
+  letter-spacing: 0.4em;
+  opacity: 0.8;
+}
+
+.gen-art__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 10.5cqi;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0.6cqi 2.4cqi rgba(0, 0, 0, 0.7);
+}
+
+.gen-art__year {
+  font-size: 3.6cqi;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  opacity: 0.75;
+}
+
+/* ============================================================
+   잠긴 카드 / 카드 뒷면
+   ============================================================ */
+.card--locked .card__face--locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3cqi;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0 3cqi, transparent 3cqi 6cqi),
+    linear-gradient(160deg, #1b1d2e, #0e0f18);
+  border: 0.8cqi dashed rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.65);
+  box-shadow: none;
+  text-align: center;
+}
+
+.locked__icon {
+  width: 22cqi;
+  height: 22cqi;
+  opacity: 0.7;
+}
+
+.locked__name {
+  font-size: 11cqi;
+  font-weight: 900;
+  line-height: 1.15;
+  padding: 0 6cqi;
+  word-break: keep-all;
+}
+
+.locked__req {
+  font-size: 9.5cqi;
+  font-weight: 700;
+  color: #a3a9c4;
+}
+
+.card-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 4.6cqi;
+  background: radial-gradient(circle at 50% 42%, #3b2f8f, #1a1650 45%, #0b0a24 80%);
+  box-shadow:
+    inset 0 0 0 1.8cqi #dfe2f7,
+    inset 0 0 0 2.8cqi #6d64d9,
+    0 2cqi 8cqi rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.card-back__pattern {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 42%, rgba(255, 255, 255, 0.07) 0deg 6deg, transparent 6deg 12deg),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03) 0 1.5cqi, transparent 1.5cqi 3cqi);
+}
+
+.card-back__emblem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5cqi;
+}
+
+.card-back__star {
+  font-size: 30cqi;
+  line-height: 1;
+  background: linear-gradient(135deg, #fff4c9, #ffd66b 50%, #b98a2c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 4cqi rgba(255, 214, 107, 0.7));
+}
+
+.card-back__name {
+  font-size: 9cqi;
+  font-weight: 900;
+  letter-spacing: 0.25em;
+  padding-left: 0.25em;
+}
+
+.card-back__tag {
+  font-size: 3.6cqi;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em;
+  opacity: 0.7;
+}
+
+/* ============================================================
+   카드 획득 연출
+   ============================================================ */
+.reveal {
+  --glow: rgba(139, 108, 255, 0.55);
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+}
+
+.reveal--normal {
+  --glow: rgba(232, 220, 192, 0.35);
+}
+.reveal--rare {
+  --glow: rgba(210, 222, 240, 0.45);
+}
+.reveal--holo {
+  --glow: rgba(111, 216, 255, 0.55);
+}
+.reveal--ultra {
+  --glow: rgba(255, 210, 90, 0.6);
+}
+.reveal--secret {
+  --glow: rgba(255, 110, 200, 0.6);
+}
+.reveal--legend {
+  --glow: rgba(255, 200, 70, 0.75);
+}
+
+.reveal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, var(--glow), #06070e 62%);
+  animation: fade-in 0.35s ease-out both;
+}
+
+.reveal:not(.is-flipped) .reveal__backdrop {
+  background: radial-gradient(circle at 50% 40%, rgba(139, 108, 255, 0.35), #06070e 62%);
+}
+
+.reveal__stage {
+  position: relative;
+  width: min(72vw, 340px, 39dvh);
+  aspect-ratio: 63 / 88;
+  container-type: inline-size;
+  animation: pop-in 0.5s ease-out both;
+}
+
+.reveal__rays {
+  position: absolute;
+  inset: -55%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.16) 0deg 4deg, transparent 4deg 14deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 62%);
+  mask: radial-gradient(circle, #000 18%, transparent 62%);
+  opacity: 0.45;
+  animation: spin 16s linear infinite;
+  transition: opacity 0.6s;
+}
+
+.reveal.is-flipped .reveal__rays {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.flip {
+  position: absolute;
+  inset: 0;
+  perspective: 1400px;
+}
+
+.flip__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 1s cubic-bezier(0.25, 1.35, 0.45, 1);
+}
+
+.reveal.is-flipped .flip__inner {
+  transform: rotateY(180deg);
+}
+
+.flip__side {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip__back {
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 4.6cqi;
+  cursor: pointer;
+}
+
+.reveal:not(.is-flipped) .flip__back .card-back {
+  animation: charge 1.1s ease-in-out infinite;
+}
+
+.reveal.is-flipped .flip__back {
+  pointer-events: none;
+}
+
+.flip__front {
+  transform: rotateY(180deg);
+}
+
+@keyframes charge {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.025) rotate(-1.4deg);
+  }
+  75% {
+    transform: scale(1.025) rotate(1.4deg);
+  }
+}
+
+.reveal__flash {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0.85) 18%, transparent 60%);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.reveal.is-flipped .reveal__flash {
+  animation: flash 1s ease-out 0.3s both;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+.reveal__burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.reveal__burst span {
+  position: absolute;
+  left: -1.3cqi;
+  top: -3.5cqi;
+  width: 2.6cqi;
+  height: 7cqi;
+  border-radius: 1cqi;
+  background: hsl(calc(var(--i) * 20) 100% 70%);
+  opacity: 0;
+  animation: burst 1.3s cubic-bezier(0.15, 0.8, 0.3, 1) 0.45s both;
+}
+
+@keyframes burst {
+  0% {
+    opacity: 1;
+    transform: rotate(calc(var(--i) * 20deg)) translateY(0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(calc(var(--i) * 20deg)) translateY(-95cqi) scale(1);
+  }
+}
+
+.reveal__text {
+  position: relative;
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.reveal__eyebrow {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  animation: pop-in 0.5s 0.6s both;
+}
+
+.reveal.is-tier-up .reveal__eyebrow {
+  background: var(--grad);
+}
+
+.reveal__title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  animation: pop-in 0.5s 0.7s both;
+}
+
+.reveal--holo .reveal__title {
+  color: #8fd3ff;
+}
+.reveal--ultra .reveal__title {
+  color: #ffd766;
+}
+.reveal--secret .reveal__title,
+.reveal--legend .reveal__title {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.reveal--secret .reveal__title {
+  background-image: linear-gradient(90deg, #ff6b8b, #ffb86b, #fff27a, #6fffb0, #6fd8ff, #b18bff);
+}
+.reveal--legend .reveal__title {
+  background-image: linear-gradient(100deg, #c8952e, #fff3c4 40%, #f0c24f 60%, #b8872a);
+}
+
+.reveal__title--hint {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #c9cde3;
+  animation: pulse-text 1.6s ease-in-out infinite;
+}
+
+.reveal__stars {
+  font-size: 1.15rem;
+  color: #ffd766;
+  -webkit-text-fill-color: #ffd766;
+}
+
+.reveal__movie {
+  font-weight: 700;
+  animation: pop-in 0.5s 0.8s both;
+}
+
+.reveal__next {
+  color: #c9cde3;
+  font-size: 0.9rem;
+  animation: pop-in 0.5s 0.9s both;
+}
+
+.reveal__actions {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  min-height: 46px;
+}
+
+.reveal__actions .btn {
+  animation: pop-in 0.5s 1s both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-text {
+  50% {
+    opacity: 0.55;
+  }
+}

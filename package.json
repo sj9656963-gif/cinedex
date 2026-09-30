@@ -1,0 +1,43 @@
+{
+  "name": "cinedex",
+  "private": true,
+  "version": "0.1.0",
+  "description": "영화 티켓 QR·바코드를 스캔해 관람 횟수만큼 화려해지는 영화 포스터 카드를 모으는 PWA",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:phone": "vite --mode phone",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "preview:phone": "vite preview --mode phone",
+    "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "icons": "node scripts/gen-icons.mjs"
+  },
+  "dependencies": {
+    "barcode-detector": "3.2.2",
+    "idb": "8.0.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zxing-wasm": "3.1.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.0",
+    "@types/pngjs": "6.0.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-basic-ssl": "2.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "bwip-js": "4.11.4",
+    "fake-indexeddb": "6.2.5",
+    "pngjs": "7.0.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.1",
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "5.0.2",
+    "workbox-window": "7.4.1"
+  }
+}
