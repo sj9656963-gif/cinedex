@@ -17,6 +17,29 @@ test('빈 도감 · 등급 안내 화면', async ({ page }) => {
   await shot(page, '30-tiers', true);
 });
 
+test('설정: 저장 상태 표시, 백업 파일을 저장하면 마지막 백업 날짜가 남는다', async ({ page }) => {
+  await page.goto('./#/settings');
+  const stats = page.getByTestId('storage-stats');
+  await expect(stats).toContainText('영화 0편 · 관람 0회');
+  await expect(page.getByTestId('last-backup')).toHaveText('아직 없음');
+  await expect(page.getByTestId('persist-state')).toHaveText(/영구 보관|기본 보관/);
+
+  await importSeed(page);
+  await expect(stats).toContainText(`영화 ${SEED_MOVIES.length}편 · 관람 29회`);
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: '백업 파일 저장' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^cinedex-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  await expect(page.getByTestId('last-backup')).toHaveText(/^\d{4}\.\d{2}\.\d{2}$/);
+  // 새로고침해도 백업 날짜가 유지된다
+  await page.reload();
+  await expect(page.getByTestId('last-backup')).toHaveText(/^\d{4}\.\d{2}\.\d{2}$/);
+  await page.waitForTimeout(400);
+  await shot(page, '42-settings-storage');
+});
+
 test('백업으로 채운 도감 + 등급별 카드 상세 화면', async ({ page }) => {
   await mockTmdbImages(page);
   await importSeed(page);

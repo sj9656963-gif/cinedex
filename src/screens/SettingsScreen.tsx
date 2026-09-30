@@ -1,13 +1,21 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { IconDownload, IconExternal, IconUpload } from '../components/Icons';
 import { exportBackup, importBackup } from '../lib/backup';
 import { clearCollection } from '../lib/collection';
-import { notifyCollectionChanged } from '../lib/hooks';
+import { notifyCollectionChanged, useCollection } from '../lib/hooks';
 import { updateSettings, useSettings } from '../lib/settings';
+import { getPersistState, getUsageBytes, isIOS, isStandalone, requestPersistence, type PersistState } from '../lib/storage';
 import { TmdbError, verifyToken } from '../lib/tmdb';
 import { showToast } from '../lib/toast';
-import { todayLocal } from '../lib/util';
+import { formatBytes, formatDate, todayLocal } from '../lib/util';
+
+const PERSIST_LABELS: Record<PersistState | 'loading', string> = {
+  persisted: '영구 보관',
+  'best-effort': '기본 보관',
+  unsupported: '확인 불가',
+  loading: '확인 중…',
+};
 
 export function SettingsScreen() {
   const settings = useSettings();
@@ -16,6 +24,32 @@ export function SettingsScreen() {
   const [checking, setChecking] = useState(false);
   const [dialog, confirm] = useConfirm();
   const importRef = useRef<HTMLInputElement>(null);
+  const { items } = useCollection();
+  const totalViews = items.reduce((sum, s) => sum + s.count, 0);
+  const [persist, setPersist] = useState<PersistState | null>(null);
+  const [usage, setUsage] = useState<number | null>(null);
+  const ios = isIOS();
+  const standalone = isStandalone();
+
+  // 기록 수가 바뀌면(불러오기·초기화) 보관 상태와 사용 공간을 다시 읽는다.
+  useEffect(() => {
+    let alive = true;
+    void Promise.all([getPersistState(), getUsageBytes()]).then(([state, bytes]) => {
+      if (!alive) return;
+      setPersist(state);
+      setUsage(bytes);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [totalViews]);
+
+  const askPersist = async () => {
+    const state = await requestPersistence();
+    setPersist(state);
+    if (state === 'persisted') showToast('영구 보관이 켜졌어요.', 'success');
+    else showToast('브라우저가 아직 허용하지 않았어요. 홈 화면에 추가해서 쓰면 허용될 가능성이 높아요.', 'info', 5000);
+  };
 
   const saveToken = async (e: FormEvent) => {
     e.preventDefault();
@@ -56,6 +90,7 @@ export function SettingsScreen() {
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+      updateSettings({ lastBackupAt: Date.now() });
       showToast(`백업 파일을 저장했어요. (영화 ${data.movies.length}편 · 관람 ${data.viewings.length}회)`, 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : '백업에 실패했어요.', 'error');
@@ -100,6 +135,85 @@ export function SettingsScreen() {
         <p className="eyebrow">SETTINGS</p>
         <h1>설정</h1>
       </header>
+
+      <section className="panel section" aria-labelledby="storage-title">
+        <h2 id="storage-title" className="section__title">
+          내 카드 저장
+        </h2>
+        <p className="muted small">
+          카드와 관람 기록은 이 휴대폰의 브라우저 안에 저장돼요. 앱을 닫았다 다시 열어도, 앱이 업데이트돼도 그대로 남아 있어요.
+        </p>
+        <dl className="storage-stats" data-testid="storage-stats">
+          <div>
+            <dt>저장된 기록</dt>
+            <dd>
+              영화 {items.length}편 · 관람 {totalViews}회
+            </dd>
+          </div>
+          <div>
+            <dt>보관 방식</dt>
+            <dd className={persist === 'persisted' ? 'is-good' : undefined} data-testid="persist-state">
+              {PERSIST_LABELS[persist ?? 'loading']}
+            </dd>
+          </div>
+          <div>
+            <dt>사용 공간</dt>
+            <dd>{usage === null ? '-' : formatBytes(usage)}</dd>
+          </div>
+          <div>
+            <dt>마지막 백업</dt>
+            <dd data-testid="last-backup">
+              {settings.lastBackupAt ? formatDate(todayLocal(new Date(settings.lastBackupAt))) : '아직 없음'}
+            </dd>
+          </div>
+        </dl>
+
+        {persist === 'persisted' && (
+          <p className="muted small">영구 보관 중이라 휴대폰 저장 공간이 부족해져도 브라우저가 자동으로 지우지 않아요.</p>
+        )}
+        {persist === 'best-effort' && (
+          <div className="storage-note">
+            <p className="muted small">
+              지금은 기본 보관이라, 휴대폰 저장 공간이 아주 부족해지면 브라우저가 지울 수 있어요. 홈 화면에 추가해서 쓰면 영구 보관이
+              허용될 가능성이 높아요.
+            </p>
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => void askPersist()}>
+              영구 보관 요청
+            </button>
+          </div>
+        )}
+
+        {ios && !standalone && (
+          <div className="callout callout--warn" role="note">
+            <b>아이폰은 홈 화면에 추가해서 쓰세요.</b> 사파리에서는 7일 동안 들어오지 않으면 저장된 카드가 지워질 수 있어요. 공유 버튼 →
+            ‘홈 화면에 추가’로 설치하면 이 규칙이 적용되지 않아요. 사파리와 홈 화면 앱은 저장 공간이 따로라서, 이미 모은 카드는 아래
+            ‘백업 파일 저장’ 후 홈 화면 앱에서 ‘백업 불러오기’로 옮겨 주세요.
+          </div>
+        )}
+        {ios && standalone && <p className="muted small">홈 화면 앱으로 쓰고 있어서 사파리의 7일 삭제 규칙이 적용되지 않아요.</p>}
+
+        <ul className="muted small plain-list">
+          <li>브라우저의 방문 기록·사이트 데이터를 지우거나, 시크릿(개인정보 보호) 모드에서 쓰고 창을 닫으면 지워져요.</li>
+          <li>휴대폰을 바꾸거나 다른 브라우저로 열면 카드가 보이지 않아요. 백업 파일로 옮길 수 있어요.</li>
+        </ul>
+
+        <div className="actions">
+          <button type="button" className="btn btn--ghost" onClick={() => void download()}>
+            <IconDownload /> 백업 파일 저장
+          </button>
+          <label className="btn btn--ghost">
+            <IconUpload /> 백업 불러오기
+            <input
+              ref={importRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              data-testid="backup-input"
+              onChange={(e) => void restore(e.target.files?.[0])}
+            />
+          </label>
+        </div>
+      </section>
 
       <section className="panel section">
         <h2 className="section__title">영화 검색 · 공식 포스터 (TMDB)</h2>
@@ -154,29 +268,6 @@ export function SettingsScreen() {
             onChange={(e) => updateSettings({ tilt: e.target.checked })}
           />
         </label>
-      </section>
-
-      <section className="panel section">
-        <h2 className="section__title">백업</h2>
-        <p className="muted small">
-          도감은 이 기기에만 저장돼요. 휴대폰을 바꾸거나 브라우저 데이터를 지우기 전에 백업 파일을 저장해 두세요.
-        </p>
-        <div className="actions">
-          <button type="button" className="btn btn--ghost" onClick={() => void download()}>
-            <IconDownload /> 백업 파일 저장
-          </button>
-          <label className="btn btn--ghost">
-            <IconUpload /> 백업 불러오기
-            <input
-              ref={importRef}
-              type="file"
-              accept="application/json,.json"
-              className="sr-only"
-              data-testid="backup-input"
-              onChange={(e) => void restore(e.target.files?.[0])}
-            />
-          </label>
-        </div>
       </section>
 
       <section className="panel section">

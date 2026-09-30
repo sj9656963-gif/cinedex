@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { TabBar } from './components/TabBar';
 import { ToastHost } from './components/ToastHost';
 import { useRoute, type Route } from './lib/router';
+import { ensurePersistence } from './lib/storage';
 import { CollectionScreen } from './screens/CollectionScreen';
 import { MovieScreen } from './screens/MovieScreen';
 import { ScanScreen } from './screens/ScanScreen';
@@ -34,6 +35,11 @@ function Screen({ route }: { route: Route }) {
 export default function App() {
   const route = useRoute();
   const key = route.name === 'movie' ? `movie:${route.id}` : route.name;
+
+  useEffect(() => {
+    // 이전에 모은 카드가 있으면 영구 보관을 요청해 둔다.
+    void ensurePersistence();
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);

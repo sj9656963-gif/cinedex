@@ -1503,6 +1503,69 @@ input[type='date']::-webkit-calendar-picker-indicator {
   max-width: 720px;
 }
 
+.storage-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.storage-stats > div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+
+.storage-stats dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.storage-stats dd {
+  margin: 2px 0 0;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.is-good {
+  color: var(--success);
+}
+
+.storage-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.callout {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.callout--warn {
+  background: rgba(255, 200, 87, 0.1);
+  border: 1px solid rgba(255, 200, 87, 0.45);
+  color: #ffe3a3;
+}
+
+.callout b {
+  color: #fff;
+}
+
+.plain-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .token-form {
   display: flex;
   flex-direction: column;
@@ -1513,6 +1576,16 @@ input[type='date']::-webkit-calendar-picker-indicator {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.token-form__row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.token-form__row .btn {
+  flex: none;
+  white-space: nowrap;
 }
 
 .about__list {

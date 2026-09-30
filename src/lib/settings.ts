@@ -8,10 +8,12 @@ export interface Settings {
   tilt: boolean;
   /** 마지막으로 고른 극장 (다음 등록 때 기본값) */
   lastChain: ChainId | '';
+  /** 마지막으로 백업 파일을 저장한 시각 (ms) */
+  lastBackupAt: number | null;
 }
 
 const STORAGE_KEY = 'cinedex.settings.v1';
-const DEFAULTS: Settings = { tmdbToken: '', tilt: true, lastChain: '' };
+const DEFAULTS: Settings = { tmdbToken: '', tilt: true, lastChain: '', lastBackupAt: null };
 
 let cache: Settings | null = null;
 const listeners = new Set<() => void>();
@@ -25,6 +27,7 @@ function load(): Settings {
       tmdbToken: typeof raw.tmdbToken === 'string' ? raw.tmdbToken : DEFAULTS.tmdbToken,
       tilt: typeof raw.tilt === 'boolean' ? raw.tilt : DEFAULTS.tilt,
       lastChain: isChainId(raw.lastChain) ? raw.lastChain : '',
+      lastBackupAt: typeof raw.lastBackupAt === 'number' && Number.isFinite(raw.lastBackupAt) ? raw.lastBackupAt : null,
     };
   } catch {
     return { ...DEFAULTS };

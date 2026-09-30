@@ -18,6 +18,7 @@ import { notifyCollectionChanged, useCollection } from '../lib/hooks';
 import { resolveMovieInput, type MoviePick } from '../lib/pick';
 import { href, navigate } from '../lib/router';
 import { getSettings, updateSettings } from '../lib/settings';
+import { ensurePersistence } from '../lib/storage';
 import {
   isPlausibleTicketCode,
   MIN_CODE_LENGTH,
@@ -259,6 +260,8 @@ function DetailsStep({ ticket, detectedChain, onBack, onDuplicate, onDone }: Det
       const result = await registerViewing({ ticket, chain, watchedAt: date, movie });
       updateSettings({ lastChain: chain });
       notifyCollectionChanged();
+      // 지킬 카드가 생겼으니 브라우저에 영구 보관을 요청 (결과와 상관없이 진행)
+      void ensurePersistence();
       const summary = await getMovieSummary(result.movie.id);
       if (!summary) throw new Error('카드를 불러오지 못했어요.');
       onDone(result, cardFromSummary(summary));

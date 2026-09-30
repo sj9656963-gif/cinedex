@@ -39,3 +39,10 @@ export function hashString(input: string): number {
 export function padSerial(serial: number): string {
   return String(serial).padStart(4, '0');
 }
+
+/** 1536 → '1.5KB', 2_400_000 → '2.3MB' */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
