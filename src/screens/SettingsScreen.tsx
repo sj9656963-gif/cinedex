@@ -24,7 +24,7 @@ export function SettingsScreen() {
   const [checking, setChecking] = useState(false);
   const [dialog, confirm] = useConfirm();
   const importRef = useRef<HTMLInputElement>(null);
-  const { items } = useCollection();
+  const { items, loading: collectionLoading, error: collectionError } = useCollection();
   const totalViews = items.reduce((sum, s) => sum + s.count, 0);
   const [persist, setPersist] = useState<PersistState | null>(null);
   const [usage, setUsage] = useState<number | null>(null);
@@ -146,8 +146,13 @@ export function SettingsScreen() {
         <dl className="storage-stats" data-testid="storage-stats">
           <div>
             <dt>저장된 기록</dt>
-            <dd>
-              영화 {items.length}편 · 관람 {totalViews}회
+            {/* 불러오기 전·실패 시 '0편'을 보여주면 기록이 사라진 것처럼 보이므로 숫자를 띄우지 않는다. */}
+            <dd data-testid="stored-records">
+              {collectionLoading
+                ? '확인 중…'
+                : collectionError
+                  ? '불러오지 못했어요'
+                  : `영화 ${items.length}편 · 관람 ${totalViews}회`}
             </dd>
           </div>
           <div>
